@@ -1,23 +1,29 @@
-# PDF Question Answering with FAISS‑Based RAG (CLI)
+# PDF Question Answering with Streamlit GUI (RAG + FAISS)
 
-This project is an **optimized command‑line PDF Question Answering system** built using a **Retrieval‑Augmented Generation (RAG)** architecture. It efficiently processes PDF documents by splitting them into chunks, storing embeddings in a **FAISS vector database**, and retrieving only the most relevant chunks at query time.
+This project is a **PDF Question Answering application with a graphical user interface (GUI)** built using **Streamlit**. It implements a **Retrieval-Augmented Generation (RAG)** pipeline:
 
-Unlike naïve approaches that feed the entire PDF to the language model, this implementation uses **chunking + similarity search**, making it scalable and efficient for larger documents.
+* Extract text from an uploaded PDF
+* Split the text into **chunks**
+* Create embeddings and store them in a **FAISS vector index**
+* Perform **similarity search** to retrieve the most relevant chunks for a question
+* Use an OpenAI chat model to answer **strictly from retrieved PDF context**
+
+It also supports **local caching** of the FAISS index so the same PDF does not need to be re-embedded every time.
 
 ---
 
 ## Project Structure
 
 ```
-AI-Task-02/
+AI-Task-05/
 │
-├── main.py              # FAISS‑based RAG CLI application
-├── example.pdf          # Sample PDF file
+├── app.py               # Streamlit GUI application (RAG + FAISS)
+├── example.pdf          # Sample PDF (optional)
 ├── .env                 # Stores OPENAI_API_KEY (NOT committed)
-├── .env.example         # Environment variable template
+├── .env.example         # Environment variable template (safe to commit)
 ├── .gitignore           # Git ignore rules
-├── .rag_cache/          # Cached FAISS index and metadata (auto‑generated)
-└── README.md            # Project documentation
+├── .rag_cache/          # Cached FAISS index + metadata (auto-generated)
+└── README.md            # Documentation (this file)
 ```
 
 ---
@@ -26,174 +32,155 @@ AI-Task-02/
 
 ### Prerequisites
 
+* Windows / macOS / Linux
 * Python 3.10 or higher
 * OpenAI API key
 * pip (Python package manager)
 
 ---
 
-### Installation Steps
+### Installation
 
-#### 1. Clone the repository
+#### 1) Create (optional) virtual environment
 
-```
-git clone https://github.com/yourusername/pdf-rag-faiss-cli.git
-cd pdf-rag-faiss-cli
-```
-
----
-
-#### 2. (Optional) Create and activate a virtual environment
-
-```
+```bash
 python -m venv venv
 ```
 
-**Windows**
+Activate the virtual environment:
 
-```
+* **Windows**
+
+```bash
 venv\Scripts\activate
 ```
 
-**macOS / Linux**
+* **macOS / Linux**
 
-```
+```bash
 source venv/bin/activate
 ```
 
----
+#### 2) Install dependencies
 
-#### 3. Install dependencies
-
-```
-pip install openai python-dotenv pypdf numpy faiss-cpu
+```bash
+pip install streamlit openai python-dotenv pypdf numpy faiss-cpu
 ```
 
 ---
 
-#### 4. Configure OpenAI API key
+## 2. API Key Configuration (Important)
 
-Create a `.env` file in the project root:
+Create a file named `.env` in the project root:
 
-```
+```env
 OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-**Important notes:**
+Notes:
 
 * Do **not** use quotes around the key
-* Ensure `.env` is listed in `.gitignore`
+* Never commit `.env` to GitHub
 * Rotate the key if it was ever exposed
 
----
+Commit a safe template instead:
 
-#### 5. Run the application
+**.env.example**
 
-```
-python main.py "C:\\full\\path\\to\\your\\pdf\\file.pdf"
-```
-
-Example:
-
-```
-python main.py "C:\\Users\\sanut\\OneDrive\\Documents\\AIGENX\\ai tasks\\AI-Task-02\\example.pdf"
+```env
+OPENAI_API_KEY=
 ```
 
 ---
 
-## 2. How the System Works
+## 3. Running the Streamlit App
 
-This application follows a standard **RAG pipeline with vector storage**:
+### Recommended command (works even when `streamlit` is not on PATH)
 
-1. The PDF is read and text is extracted from all pages.
-2. Text is split into overlapping chunks.
-3. Each chunk is embedded using OpenAI embeddings.
-4. Chunk embeddings are stored in a **FAISS vector index**.
-5. The FAISS index and chunk metadata are cached to disk.
-6. User questions are embedded and searched against the FAISS index.
-7. Top‑K most similar chunks are retrieved.
-8. A GPT model generates an answer **strictly from the retrieved chunks**.
-
-If the answer is not present in the PDF, the system explicitly reports that it does not know.
-
----
-
-## 3. Key Components and Logic
-
-| Component         | Purpose                                  |
-| ----------------- | ---------------------------------------- |
-| `pypdf`           | Extracts text from PDF pages             |
-| Text Chunking     | Prevents feeding entire PDF to the model |
-| OpenAI Embeddings | Converts text chunks into vectors        |
-| FAISS             | Efficient vector similarity search       |
-| Similarity Search | Retrieves relevant chunks only           |
-| GPT Model         | Generates grounded answers               |
-| Cache Layer       | Avoids recomputing embeddings on reruns  |
-
----
-
-## 4. Application Flow
-
-```mermaid
-flowchart TD
-    A[PDF File] --> B[Extract Text]
-    B --> C[Chunk Text]
-    C --> D[Generate Embeddings]
-    D --> E[Build / Load FAISS Index]
-    F[User Question] --> G[Embed Question]
-    G --> H[FAISS Similarity Search]
-    E --> H
-    H --> I[Retrieve Top‑K Chunks]
-    I --> J[LLM Answer Generation]
-    J --> K[Answer to User]
+```bash
+python -m streamlit run app.py
 ```
 
----
+Alternative:
 
-## 5. Caching Behavior
+```bash
+py -m streamlit run app.py
+```
 
-* On **first run** with a PDF:
-
-  * Chunks are embedded
-  * FAISS index is created
-  * Index and metadata are saved to `.rag_cache/`
-
-* On **subsequent runs** with the same PDF:
-
-  * FAISS index is loaded from disk
-  * Embedding step is skipped
-  * Startup time is significantly faster
+Streamlit will print a local URL such as `http://localhost:8501`. Open it in your browser.
 
 ---
 
-## 6. Limitations
+## 4. How It Works (RAG + FAISS)
 
-* Single‑PDF ingestion per run
-* CLI‑only interface
-* No OCR support for scanned PDFs
-* Exact FAISS search (not approximate)
+1. User uploads a PDF using the GUI.
+2. The app extracts text using `pypdf`.
+3. Text is split into overlapping chunks.
+4. Each chunk is embedded using OpenAI embeddings.
+5. Embeddings are stored in a FAISS index (cosine similarity via inner product on normalized vectors).
+6. When a question is asked, the question is embedded and searched against FAISS.
+7. The top-K chunks are retrieved and passed to the LLM.
+8. The model answers using **only the retrieved chunks**.
 
----
+If the answer is not present in the retrieved context, the model responds:
 
-## 7. Future Improvements
-
-* Multi‑PDF ingestion and unified index
-* Page‑number citations in answers
-* Approximate FAISS indexes (IVF / HNSW) for very large corpora
-* OCR support for scanned documents
-* Web UI using Flask or Streamlit
-* REST API for integration with other systems
+> I don't know based on the provided PDF.
 
 ---
 
-## Security Notes
+## 5. Caching
 
-* Never commit `.env` files
-* Keep `.rag_cache/` out of Git
-* Rotate API keys if exposed
+When caching is enabled, the app saves:
+
+* FAISS index: `.rag_cache/<hash>.faiss`
+* Chunk metadata: `.rag_cache/<hash>.json`
+
+If the same PDF is uploaded again (same content hash), the index is loaded from cache and embedding is skipped.
+
+---
+
+## 6. Common Issues
+
+### A) `'streamlit' is not recognized`
+
+Use:
+
+```bash
+python -m streamlit run app.py
+```
+
+This avoids Windows PATH issues.
+
+### B) `AuthenticationError: 401` (invalid API key)
+
+* Check `.env` contains the correct key
+* Ensure there are **no quotes**
+* Restart the terminal
+* Rotate the key if it was committed/exposed
+
+### C) No text extracted
+
+Some PDFs are scanned images (no selectable text). In that case, OCR is required (not included in this version).
+
+---
+
+## 7. `.gitignore` (Recommended)
+
+Ensure these are ignored:
+
+```gitignore
+.env
+.env.*
+!.env.example
+.rag_cache/
+__pycache__/
+*.pyc
+venv/
+.venv/
+```
 
 ---
 
 ## License
 
-This project is intended for educational and experimental use.
+Educational / experimental use.
